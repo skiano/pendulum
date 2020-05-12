@@ -1,6 +1,9 @@
+const TWO_PI = Math.PI * 2;
+
 const create = (tag = 'circle', attributes) => {
   const elm = document.createElementNS('http://www.w3.org/2000/svg', tag)
   elm._attributes = {}
+  elm._ismagic = true
   elm.update = (attr) => {
     for (let a in attr) {
       if (elm._attributes[a] !== attr[a]) {
@@ -27,146 +30,266 @@ const picture = () => {
   wrap.appendChild(svg);
   pict.appendChild(wrap);
 
-  pict.$add = (elm) => {
+  pict.$add = (...args) => {
+    const elm = args[0]._ismagic
+      ? args[0]
+      : create(...args)
     svg.appendChild(elm)
+    return elm    
   }
 
   return pict;
 };
 
-const cX = 600
-const cY = 1000
+const project = (x, y) => {
+  const tilt = 300
+  const shift = 230
+  const base = 1000
+  const yf = y / 1200
+  const scale = 0.8
+  return [(x * scale) + (shift * yf), base - (tilt * yf)]
+}
 
-const line = create('line', {
-  x1: cX,
-  y1: 0,
-  x2: cX,
-  y2: cY,
-  style: 'stroke:rgb(255,0,0);stroke-width:2',
-});
+const distance = (a, b) => {
+  let sum = 0
+  for (let i = 0; i < a.length; i++) {
+    sum += Math.pow((b[i] - a[i]), 2)
+  }
+  return Math.sqrt(sum)
+}
 
-const bob = create('circle', {
-  cx: cX,
-  cy: cY,
-  r: 20,
-  fill: 'rgba(255, 0, 0, 1)',
-});
+const model = (options = {}) => {
+  const {
+    box,
+    projection,
+    stringLength,
+    initialAngle,
+    initialVelocity,
+  } = Object.assign({
+    box: [1200, 1200, 1200],
+    stringLength: 1100,
+    initialAngle: TWO_PI / 8,
+    initialVelocity: [0, 0, 0],
+    projection: ([x, y, z = 0]) => {
+      const tilt = 300
+      const shift = 275
+      const base = 1100
+      const yf = y / 1200
+      const zoom = 0.6
+      return [(x * zoom) + (shift * yf) + 100, base - (tilt * yf) - z * zoom]
+    },
+  }, options)
+
+  const [w, d, h] = box
+  const fixedPoint = [w/2, d/2, h];
+
+  console.log(initialAngle, Math.sin(initialAngle))
+
+  let bobX = fixedPoint[0] + Math.sin(initialAngle) * stringLength
+  let bobY = fixedPoint[1]
+  let bobZ = fixedPoint[2] - Math.cos(initialAngle) * stringLength
+
+  console.log(bobZ, bobX, bobY)
+
+  const TWO_D = picture()
+  const THREE_D = picture()
+
+  // BASE
+  THREE_D.$add('path', {
+    d: [
+      `M ${projection([0, 0, 0]).join()}`,
+      `L ${projection([w, 0, 0]).join()}`,
+      `L ${projection([w, d, 0]).join()}`,
+      `L ${projection([0, d, 0]).join()}`,
+      `Z`
+    ],
+    fill: 'none',
+    stroke: 'rgba(0, 0, 255, 1)',
+    'stroke-dasharray': "6,6"
+  })
+
+  // BACK
+  THREE_D.$add('path', {
+    d: [
+      `M ${projection([0, d, 0]).join()}`,
+      `L ${projection([0, d, h]).join()}`,
+      `L ${projection([w, d, h]).join()}`,
+      `L ${projection([w, d, 0]).join()}`,
+      `Z`
+    ],
+    fill: 'none',
+    stroke: 'rgba(0, 0, 255, 1)',
+    'stroke-dasharray': "6,6"
+  })
+
+  // FIXED POINT
+  const f = projection(fixedPoint)
+  THREE_D.$add('circle', {
+    cx: f[0],
+    cy: f[1],
+    r: 5,
+    fill: 'rgba(0, 0, 255, 1)',
+  })
+
+  // PLUMB LINE
+  const c = projection([w/2, d/2, 0])
+  THREE_D.$add('line', {
+    x1: f[0],
+    y1: f[1],
+    x2: c[0],
+    y2: c[1],
+    stroke: 'rgba(0, 0, 255, 1)',
+    'stroke-dasharray': "6,6"
+  })
+  THREE_D.$add('circle', {
+    cx: c[0],
+    cy: c[1],
+    r: 5,
+    fill: 'rgba(0, 0, 255, 1)',
+  })
+
+  // STRING
+  const b = projection([bobX, bobY, bobZ])
+  const string = THREE_D.$add('line', {
+    x1: f[0],
+    y1: f[1],
+    x2: b[0],
+    y2: b[1],
+    stroke: 'rgba(0, 0, 255, 1)',
+  })
+
+  // BOB
+  const bob = THREE_D.$add('circle', {
+    cx: b[0],
+    cy: b[1],
+    r: 12,
+    fill: 'rgba(0, 0, 255, 1)',
+  })
+
+  // RIGHT
+  THREE_D.$add('path', {
+    d: [
+      `M ${projection([w, 0, 0]).join()}`,
+      `L ${projection([w, d, 0]).join()}`,
+      `L ${projection([w, d, h]).join()}`,
+      `L ${projection([w, 0, h]).join()}`,
+      `Z`
+    ],
+    fill: 'none',
+    stroke: 'rgba(0, 0, 255, 1)',
+    'stroke-width': 1.5,
+  })
+
+  // FRONT
+  THREE_D.$add('path', {
+    d: [
+      `M ${projection([0, 0, 0]).join()}`,
+      `L ${projection([0, 0, h]).join()}`,
+      `L ${projection([w, 0, h]).join()}`,
+      `L ${projection([w, 0, 0]).join()}`,
+      `Z`
+    ],
+    fill: 'none',
+    stroke: 'rgba(0, 0, 255, 1)',
+    'stroke-width': 1.5,
+  })
+
+  // TOP
+  THREE_D.$add('path', {
+    d: [
+      `M ${projection([0, 0, h]).join()}`,
+      `L ${projection([w, 0, h]).join()}`,
+      `L ${projection([w, d, h]).join()}`,
+      `L ${projection([0, d, h]).join()}`,
+      `Z`
+    ],
+    fill: 'none',
+    stroke: 'rgba(0, 0, 255, 1)',
+    'stroke-width': 1.5,
+  })
+
+  return [THREE_D, TWO_D]
+}
+
+const pics = model()
+
+const container = document.getElementById('pictures')
+
+pics.forEach((p) => container.appendChild(p))
+
+
+//////////////
+//////////////
+
+
+const pw = 1200
+const ph = 1200
+const origin = [pw / 2, 0]
 
 const trail = create('path', {
   d: ``,
   fill: 'none',
-  stroke: 'rgba(0, 0, 0, 0.5)',
+  stroke: 'rgba(0, 0, 255, 1)',
+  'stroke-width': '1',
+  'stroke-linecap': 'round',
+  // 'stroke-dasharray': "10,10"
+});
+
+const base = create('path', {
+  d: `M${project(0,0).join()} L${project(1200,0).join()} L${project(1200,1200).join()} L${project(0,1200).join()} Z`,
+  fill: 'rgba(0, 0, 0, 0.03)',
+  stroke: 'rgba(0, 0, 0, 0.4)',
+  'stroke-width': '1',
+  // 'stroke-linecap': 'round',
+  // 'stroke-dasharray': "10,10"
+});
+
+const circle = create('path', {
+  d: ``,
+  fill: 'none',
+  stroke: 'rgba(255, 0, 0, 0.5)',
   'stroke-width': '3',
   'stroke-linecap': 'round',
   'stroke-dasharray': "10,10"
 });
 
-const p2 = picture();
-p2.$add(line)
-p2.$add(bob)
+const p2 = picture()
+
+p2.$add(base)
 p2.$add(trail)
 
 document.getElementById('pictures').appendChild(p2)
 
-
-let length = cY
-let angle = Math.PI / 4
-let angularVelocity = 0
-let angularAcceleration = 0
-let g = 10
-let x = cX
-let y = cY
-
-
-let f = 0
-let o = 0.4
-let nextX = 0
-let nextY = 0
+let f = 0;
 let start = Date.now();
+let time = start;
+
+let amp = 500
 
 const loop = () => {
-  const t = Date.now() - start
+  time = Date.now() - start
 
-  x = Math.sin(angle) * length
-  y = Math.cos(angle) * length
+  amp *= 0.99995
 
-  bob.update({
-    cx: x + cX,
-    cy: y,
+  const freq = 0.0052
+  const displace = 0
+
+  const r = (amp * Math.sin(freq * (time - displace)))
+
+  const theta = time / 1000
+  const x = r * Math.sin(theta) + 600
+  const y = r * Math.cos(theta) + 600
+
+  const c = project(x, y)
+
+  trail.update({
+    d: trail._attributes.d
+      ? trail._attributes.d + ` L${c[0]},${c[1]}`
+      : `M${c[0]},${c[1]}` 
   })
 
-  line.update({
-    x2: x + cX,
-    y2: y,
-  })
-
-  angularAcceleration = -0.005 * Math.sin(angle)
-
-  angle += angularVelocity
-  angularVelocity += angularAcceleration
-  angularVelocity = angularVelocity * 0.993
-
-  if (Math.abs(y - nextY) > 2 || Math.abs(x + cX - nextX) > 2) {
-    nextX = x + cX
-    nextY = y
-
-    console.log(t)
-
-    const dY = t / 5 % 1200
-
-    trail.update({
-      d: trail._attributes.d ? trail._attributes.d + ` L${nextX},${dY}` : `M${nextX},${dY}` 
-    })
-   
-    // p2.$add(create('circle', {
-    //   cx: x + cX,
-    //   cy: y,
-    //   r: 4,
-    //   fill: `rgba(0, 0, 255, ${o})`,
-    // }))
-  }
-
-  if (f++ < 3400) requestAnimationFrame(loop)
+  if (f++ < 4400) requestAnimationFrame(loop)
 }
 
 loop()
 
-// https://css-tricks.com/svg-path-syntax-illustrated-guide/
-
-const exampleLine = picture();
-
-const dots = [
-  [100, 100],
-  [200, 900],
-  [400, 800],
-  [200, 400],
-  [1100, 500],
-]
-
-let p = ''
-
-dots.forEach(([cx, cy], i) => {
-  if (i === 0) {
-    p += `M${cx},${cy}`
-  } else {
-    p += ` A 1 2, 20, 1 0, ${cx} ${cy}`
-  }
-
-
-  const d = create('circle', {
-    cx: cx,
-    cy: cy,
-    r: 10,
-    fill: 'rgba(0, 0, 255, 0.3)',
-  })
-
-  exampleLine.$add(d)
-})
-
-exampleLine.$add(create('path', {
-  d: p,
-  fill: 'none',
-  stroke: 'red',
-}))
-
-document.getElementById('pictures').appendChild(exampleLine)
