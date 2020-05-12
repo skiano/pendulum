@@ -61,14 +61,16 @@ const distance = (a, b) => {
 const model = (options = {}) => {
   const {
     box,
+    paper,
     projection,
     stringLength,
     initialAngle,
     initialVelocity,
   } = Object.assign({
     box: [1200, 1200, 1200],
+    paper: [1000, 1000],
     stringLength: 1100,
-    initialAngle: TWO_PI / 8,
+    initialAngle: TWO_PI / 13.2,
     initialVelocity: [0, 0, 0],
     projection: ([x, y, z = 0]) => {
       const tilt = 300
@@ -85,17 +87,36 @@ const model = (options = {}) => {
 
   console.log(initialAngle, Math.sin(initialAngle))
 
+  /////////////////////
+  // CHANGING THINGS //
+  /////////////////////
+
+  let [vx, vy, vz] = initialVelocity
   let bobX = fixedPoint[0] + Math.sin(initialAngle) * stringLength
   let bobY = fixedPoint[1]
   let bobZ = fixedPoint[2] - Math.cos(initialAngle) * stringLength
 
-  console.log(bobZ, bobX, bobY)
+  let paperRectangle = [
+    [fixedPoint[0] - (paper[0] / 2), fixedPoint[1] - (paper[0] / 2)],
+    [fixedPoint[0] + (paper[0] / 2), fixedPoint[1] - (paper[0] / 2)],
+    [fixedPoint[0] + (paper[0] / 2), fixedPoint[1] + (paper[0] / 2)],
+    [fixedPoint[0] - (paper[0] / 2), fixedPoint[1] + (paper[0] / 2)],
+  ]
 
-  const TWO_D = picture()
-  const THREE_D = picture()
+  ///////////////////////
+  // 2D PICTURE LAYERS //
+  ///////////////////////
 
-  // BASE
-  THREE_D.$add('path', {
+  const PICTURE_2D = picture()
+
+  ///////////////////////
+  // 3D PICTURE LAYERS //
+  ///////////////////////
+
+  const PICTURE_3D = picture()
+
+  // BOX BASE
+  PICTURE_3D.$add('path', {
     d: [
       `M ${projection([0, 0, 0]).join()}`,
       `L ${projection([w, 0, 0]).join()}`,
@@ -108,8 +129,8 @@ const model = (options = {}) => {
     'stroke-dasharray': "6,6"
   })
 
-  // BACK
-  THREE_D.$add('path', {
+  // BOX BACK
+  PICTURE_3D.$add('path', {
     d: [
       `M ${projection([0, d, 0]).join()}`,
       `L ${projection([0, d, h]).join()}`,
@@ -122,18 +143,34 @@ const model = (options = {}) => {
     'stroke-dasharray': "6,6"
   })
 
-  // FIXED POINT
-  const f = projection(fixedPoint)
-  THREE_D.$add('circle', {
-    cx: f[0],
-    cy: f[1],
-    r: 5,
-    fill: 'rgba(0, 0, 255, 1)',
+  // PAPER
+  PICTURE_3D.$add('path', {
+    d: [
+      `M ${projection(paperRectangle[0]).join()}`,
+      `L ${projection(paperRectangle[1]).join()}`,
+      `L ${projection(paperRectangle[2]).join()}`,
+      `L ${projection(paperRectangle[3]).join()}`,
+      `Z`
+    ],
+    fill: 'rgba(0, 0, 0, 0.05)',
+    stroke: 'rgba(0, 0, 0, 0.4)',
+    'stroke-width': 1,
+  })
+
+  // BOB SHADOW
+  const s = projection([bobX, bobY, 0])
+  PICTURE_3D.$add('ellipse', {
+    cx: s[0],
+    cy: s[1],
+    rx: 16,
+    ry: 8,
+    fill: 'rgba(0, 0, 0, 0.2)',
   })
 
   // PLUMB LINE
+  const f = projection(fixedPoint)
   const c = projection([w/2, d/2, 0])
-  THREE_D.$add('line', {
+  PICTURE_3D.$add('line', {
     x1: f[0],
     y1: f[1],
     x2: c[0],
@@ -141,33 +178,44 @@ const model = (options = {}) => {
     stroke: 'rgba(0, 0, 255, 1)',
     'stroke-dasharray': "6,6"
   })
-  THREE_D.$add('circle', {
+  PICTURE_3D.$add('ellipse', {
     cx: c[0],
     cy: c[1],
-    r: 5,
+    rx: 5,
+    ry: 3,
     fill: 'rgba(0, 0, 255, 1)',
   })
 
   // STRING
   const b = projection([bobX, bobY, bobZ])
-  const string = THREE_D.$add('line', {
+  const STRING_3D = PICTURE_3D.$add('line', {
     x1: f[0],
     y1: f[1],
     x2: b[0],
     y2: b[1],
-    stroke: 'rgba(0, 0, 255, 1)',
+    stroke: 'rgba(200, 20, 55, 1)',
+    'stroke-width': 1.5,
   })
 
   // BOB
-  const bob = THREE_D.$add('circle', {
+  const BOB_3D = PICTURE_3D.$add('circle', {
     cx: b[0],
     cy: b[1],
     r: 12,
+    fill: 'rgba(200, 20, 55, 1)',
+  })
+
+  // FIXED POINT
+  PICTURE_3D.$add('ellipse', {
+    cx: f[0],
+    cy: f[1],
+    rx: 5,
+    ry: 3,
     fill: 'rgba(0, 0, 255, 1)',
   })
 
-  // RIGHT
-  THREE_D.$add('path', {
+  // BOX RIGHT
+  PICTURE_3D.$add('path', {
     d: [
       `M ${projection([w, 0, 0]).join()}`,
       `L ${projection([w, d, 0]).join()}`,
@@ -180,8 +228,8 @@ const model = (options = {}) => {
     'stroke-width': 1.5,
   })
 
-  // FRONT
-  THREE_D.$add('path', {
+  // BOX FRONT
+  PICTURE_3D.$add('path', {
     d: [
       `M ${projection([0, 0, 0]).join()}`,
       `L ${projection([0, 0, h]).join()}`,
@@ -194,8 +242,8 @@ const model = (options = {}) => {
     'stroke-width': 1.5,
   })
 
-  // TOP
-  THREE_D.$add('path', {
+  // BOX TOP
+  PICTURE_3D.$add('path', {
     d: [
       `M ${projection([0, 0, h]).join()}`,
       `L ${projection([w, 0, h]).join()}`,
@@ -208,17 +256,12 @@ const model = (options = {}) => {
     'stroke-width': 1.5,
   })
 
-  return [THREE_D, TWO_D]
+  return [PICTURE_3D, PICTURE_2D]
 }
-
-const pics = model()
-
-const container = document.getElementById('pictures')
-
-pics.forEach((p) => container.appendChild(p))
 
 
 //////////////
+// OLD....  //
 //////////////
 
 
@@ -292,4 +335,14 @@ const loop = () => {
 }
 
 loop()
+
+//////////
+//////////
+
+
+
+const pics = model()
+const container = document.getElementById('pictures')
+// pics.forEach((p) => container.appendChild(p)
+container.appendChild(pics[0])
 
