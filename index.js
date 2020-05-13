@@ -281,9 +281,14 @@ const model = (options = {}) => {
 
   let angularVelocity = 0
 
+  let r = 0;
+  let inc = TWO_PI / 100
+
   function loop() {
     // Calculate acceleration
     const xaa = mass * gravity * Math.sin(xangle)
+
+    r += inc 
 
     // Increment velocity
     angularVelocity += xaa;
@@ -291,8 +296,10 @@ const model = (options = {}) => {
     // Increment angle
     xangle += angularVelocity;
 
-    bobX = fixedPoint[0] + Math.sin(xangle) * stringLength
-    bobY = fixedPoint[1]
+    // let d = fixedPoint[0] + Math.sin(xangle) * stringLength
+
+    bobX = fixedPoint[0] + Math.sin(xangle) * stringLength // d * Math.cos(r) + 600
+    // bobY = d * Math.sin(r) + 600
     bobZ = fixedPoint[2] - Math.cos(xangle) * stringLength
 
 
