@@ -74,11 +74,15 @@ const model = (options = {}) => {
     initialAngle,
     initialVelocity,
   } = Object.assign({
-    box: [1200, 1200, 1200],
+    box: [1200, 1200, 600],
     paper: [1000, 1000],
-    stringLength: 1100,
-    initialAngle: [QUARTER_CIRCLE / 2, QUARTER_CIRCLE / 2],
-    initialVelocity: [0, 0],
+    stringLength: 550,
+    // initialAngle: [QUARTER_CIRCLE / 2, 0],
+    // initialVelocity: [0, 0.01],
+    // initialAngle: [QUARTER_CIRCLE / 3, QUARTER_CIRCLE / 2],
+    // initialVelocity: [0.0, 0.007],
+    initialAngle: [QUARTER_CIRCLE / 3, QUARTER_CIRCLE * .8],
+    initialVelocity: [0.006, 0.001],
     projection: ([x, y, z = 0]) => {
       const tilt = 300
       const shift = 275
@@ -102,8 +106,7 @@ const model = (options = {}) => {
   let bobX = fixedPoint[0] + Math.sin(initialAngle) * stringLength
   let bobY = fixedPoint[1]
   let bobZ = fixedPoint[2] - Math.cos(initialAngle) * stringLength
-  let bobAccelertion = [0, 0]
-  let gravity = -0.001
+  let gravity = -0.0015
   let mass = 1
 
   let paperRectangle = [
@@ -118,6 +121,13 @@ const model = (options = {}) => {
   ///////////////////////
 
   const PICTURE_2D = picture()
+
+  const LINE_2D = PICTURE_2D.$add('path', {
+    d: ``,
+    fill: 'none',
+    stroke: 'rgba(0, 0, 0, 1)',
+    'stroke-width': 1,
+  })
 
   ///////////////////////
   // 3D PICTURE LAYERS //
@@ -138,20 +148,6 @@ const model = (options = {}) => {
     stroke: 'rgba(0, 0, 255, 1)',
     // 'stroke-dasharray': "6,6"
   })
-
-  // BOX BACK
-  // PICTURE_3D.$add('path', {
-  //   d: [
-  //     `M ${projection([0, d, 0]).join()}`,
-  //     `L ${projection([0, d, h]).join()}`,
-  //     `L ${projection([w, d, h]).join()}`,
-  //     `L ${projection([w, d, 0]).join()}`,
-  //     `Z`
-  //   ],
-  //   fill: 'none',
-  //   stroke: 'rgba(0, 0, 255, 1)',
-  //   'stroke-dasharray': "6,6"
-  // })
 
   // PAPER
   PICTURE_3D.$add('path', {
@@ -214,55 +210,11 @@ const model = (options = {}) => {
     fill: 'rgba(0, 0, 255, 1)',
   })
 
-  // BOX RIGHT
-  // PICTURE_3D.$add('path', {
-  //   d: [
-  //     `M ${projection([w, 0, 0]).join()}`,
-  //     `L ${projection([w, d, 0]).join()}`,
-  //     `L ${projection([w, d, h]).join()}`,
-  //     `L ${projection([w, 0, h]).join()}`,
-  //     `Z`
-  //   ],
-  //   fill: 'none',
-  //   stroke: 'rgba(0, 0, 255, 1)',
-  //   'stroke-width': 1.5,
-  // })
-
-  // BOX FRONT
-  // PICTURE_3D.$add('path', {
-  //   d: [
-  //     `M ${projection([0, 0, 0]).join()}`,
-  //     `L ${projection([0, 0, h]).join()}`,
-  //     `L ${projection([w, 0, h]).join()}`,
-  //     `L ${projection([w, 0, 0]).join()}`,
-  //     `Z`
-  //   ],
-  //   fill: 'none',
-  //   stroke: 'rgba(0, 0, 255, 1)',
-  //   'stroke-width': 1.5,
-  // })
-
-  // BOX TOP
-  // PICTURE_3D.$add('path', {
-  //   d: [
-  //     `M ${projection([0, 0, h]).join()}`,
-  //     `L ${projection([w, 0, h]).join()}`,
-  //     `L ${projection([w, d, h]).join()}`,
-  //     `L ${projection([0, d, h]).join()}`,
-  //     `Z`
-  //   ],
-  //   fill: 'none',
-  //   stroke: 'rgba(0, 0, 255, 1)',
-  //   'stroke-width': 1.5,
-  // })
-
   ///////////////
   // ANIMATION //
   ///////////////
 
-  
-
-  const update3dPendulum = () => {
+  const updatePosition = () => {
     let tanx = Math.tan(xangle)
     let tany = Math.tan(yangle)
     let h = stringLength / Math.sqrt(1 + Math.pow(tanx, 2) + Math.pow(tany, 2))
@@ -272,22 +224,9 @@ const model = (options = {}) => {
     bobX = fixedPoint[0] + dx
     bobY = fixedPoint[1] + dy
     bobZ = fixedPoint[2] - h
+  }
 
-    // UPDATE ACCELERATION!
-    // let rangle = Math.acos(h / stringLength)
-    // let rAcceleration = mass * gravity * Math.sin(rangle)
-
-    // let ax =  (dx / (dx + dy)) * rAcceleration // TODO: this is busted...
-    // ax = dx < 0 ? ax * -1 : ax
-
-    // let ay = (dy / (dx + dy)) * rAcceleration // TODO: this is busted...
-    // ay = dy < 0 ? ay * -1 : ay
-
-    let ax = mass * gravity * Math.sin(xangle)
-    let ay = mass * gravity * Math.sin(yangle)
-
-    bobAccelertion = [ax, ay]
-
+  const update3dPicture = () => {
     const b = projection([bobX, bobY, bobZ])
     const s = projection([bobX, bobY, 0])
 
@@ -309,19 +248,42 @@ const model = (options = {}) => {
     })
   }
 
-  update3dPendulum()
+  const update2dPicture = () => {
+    const p = `${bobX},${1200 - bobY}`
+    const d = LINE_2D._attributes.d
+
+    LINE_2D.update({
+      d: d ? d + ` L${p}` : `M${p}`
+    })
+  }
 
   function loop() {
+    updatePosition()
+    update2dPicture()
+    update3dPicture()
+
+    // calcluate angular accelerations
+    const ax = mass * gravity * Math.sin(xangle)
+    const ay = mass * gravity * Math.sin(yangle)
+
     // Increment velocities (multiply by frame time?)
-    vx += bobAccelertion[0]
-    vy += bobAccelertion[1]
+    vx += ax
+    vy += ay
 
     // Increment angles
     xangle = clip(xangle + vx, -QUARTER_CIRCLE, QUARTER_CIRCLE);
     yangle = clip(yangle + vy, -QUARTER_CIRCLE, QUARTER_CIRCLE);
 
-    update3dPendulum()
-    requestAnimationFrame(loop)
+    // damp
+    vx *= 0.9997
+    vy *= 0.9997
+    mass -= 0.00018
+
+    if (mass > 0) {
+      requestAnimationFrame(loop)
+    } else {
+      alert('end...')
+    }
   }
 
   loop()
@@ -331,89 +293,6 @@ const model = (options = {}) => {
 
 // https://www.khanacademy.org/computing/computer-programming/programming-natural-simulations/programming-oscillations/a/trig-and-forces-the-pendulum
 
-//////////////
-// OLD....  //
-//////////////
-
-
-const pw = 1200
-const ph = 1200
-const origin = [pw / 2, 0]
-
-const trail = create('path', {
-  d: ``,
-  fill: 'none',
-  stroke: 'rgba(0, 0, 255, 1)',
-  'stroke-width': '1',
-  'stroke-linecap': 'round',
-  // 'stroke-dasharray': "10,10"
-});
-
-const base = create('path', {
-  d: `M${project(0,0).join()} L${project(1200,0).join()} L${project(1200,1200).join()} L${project(0,1200).join()} Z`,
-  fill: 'rgba(0, 0, 0, 0.03)',
-  stroke: 'rgba(0, 0, 0, 0.4)',
-  'stroke-width': '1',
-  // 'stroke-linecap': 'round',
-  // 'stroke-dasharray': "10,10"
-});
-
-const circle = create('path', {
-  d: ``,
-  fill: 'none',
-  stroke: 'rgba(255, 0, 0, 0.5)',
-  'stroke-width': '3',
-  'stroke-linecap': 'round',
-  'stroke-dasharray': "10,10"
-});
-
-const p2 = picture()
-
-p2.$add(base)
-p2.$add(trail)
-
-document.getElementById('pictures').appendChild(p2)
-
-let f = 0;
-let start = Date.now();
-let time = start;
-
-let amp = 500
-
-const loop = () => {
-  time = Date.now() - start
-
-  amp *= 0.99995
-
-  const freq = 0.0052
-  const displace = 0
-
-  const r = (amp * Math.sin(freq * (time - displace)))
-
-  const theta = time / 1000
-  const x = r * Math.sin(theta) + 600
-  const y = r * Math.cos(theta) + 600
-
-  const c = project(x, y)
-
-  trail.update({
-    d: trail._attributes.d
-      ? trail._attributes.d + ` L${c[0]},${c[1]}`
-      : `M${c[0]},${c[1]}` 
-  })
-
-  if (f++ < 4400) requestAnimationFrame(loop)
-}
-
-loop()
-
-//////////
-//////////
-
-
-
 const pics = model()
 const container = document.getElementById('pictures')
-// pics.forEach((p) => container.appendChild(p)
-container.appendChild(pics[0])
-
+pics.forEach((p) => container.appendChild(p))
