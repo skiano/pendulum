@@ -1,4 +1,5 @@
 const TWO_PI = Math.PI * 2;
+const QUARTER_CIRCLE = TWO_PI / 4
 
 const create = (tag = 'circle', attributes) => {
   const elm = document.createElementNS('http://www.w3.org/2000/svg', tag)
@@ -58,6 +59,12 @@ const distance = (a, b) => {
   return Math.sqrt(sum)
 }
 
+const clip = (v, min, max) => {
+  if (v < min) return min
+  if (v > max) return max
+  return v
+}
+
 const model = (options = {}) => {
   const {
     box,
@@ -70,8 +77,8 @@ const model = (options = {}) => {
     box: [1200, 1200, 1200],
     paper: [1000, 1000],
     stringLength: 1100,
-    initialAngle: TWO_PI / 8,
-    initialVelocity: [0, 0, 0],
+    initialAngle: [-QUARTER_CIRCLE / 2, -QUARTER_CIRCLE / 2],
+    initialVelocity: [0.009, 0.009],
     projection: ([x, y, z = 0]) => {
       const tilt = 300
       const shift = 275
@@ -85,18 +92,19 @@ const model = (options = {}) => {
   const [w, d, h] = box
   const fixedPoint = [w/2, d/2, h];
 
-  console.log(initialAngle, Math.sin(initialAngle))
-
   /////////////////////
   // CHANGING THINGS //
   /////////////////////
 
-  let xangle = initialAngle // how to do this in 2d?
-  let yangle = 0
-  let [vx, vy, vz] = initialVelocity
+  let xangle = initialAngle[0]
+  let yangle = initialAngle[1]
+  let [vx, vy] = initialVelocity
   let bobX = fixedPoint[0] + Math.sin(initialAngle) * stringLength
   let bobY = fixedPoint[1]
   let bobZ = fixedPoint[2] - Math.cos(initialAngle) * stringLength
+  let bobAccelertion = [0, 0]
+  let gravity = -0.001
+  let mass = 1
 
   let paperRectangle = [
     [fixedPoint[0] - (paper[0] / 2), fixedPoint[1] - (paper[0] / 2)],
@@ -252,7 +260,31 @@ const model = (options = {}) => {
   // ANIMATION //
   ///////////////
 
+  
+
   const update3dPendulum = () => {
+    let tanx = Math.tan(xangle)
+    let tany = Math.tan(yangle)
+    let h = stringLength / Math.sqrt(1 + Math.pow(tanx, 2) + Math.pow(tany, 2))
+    let dx = h * tanx
+    let dy = h * tany
+
+    bobX = fixedPoint[0] + dx
+    bobY = fixedPoint[1] + dy
+    bobZ = fixedPoint[2] - h
+
+    // UPDATE ACCELERATION!
+    let rangle = Math.acos(h / stringLength)
+    let rAcceleration = mass * gravity * Math.sin(rangle)
+
+    let ax = (dx / (dx + dy)) * rAcceleration
+    ax = dx < 0 ? ax * -1 : ax
+
+    let ay = (dy / (dx + dy)) * rAcceleration
+    ay = dy < 0 ? ay * -1 : ay
+
+    bobAccelertion = [ax, ay]
+
     const b = projection([bobX, bobY, bobZ])
     const s = projection([bobX, bobY, 0])
 
@@ -276,36 +308,14 @@ const model = (options = {}) => {
 
   update3dPendulum()
 
-  let gravity = -0.001
-  let mass = 1
-
-  let angularVelocity = 0
-
-  let r = 0;
-  let inc = TWO_PI / 100
-
   function loop() {
-    // Calculate acceleration
-    const xaa = mass * gravity * Math.sin(xangle)
+    // Increment velocities (multiply by frame time?)
+    vx += bobAccelertion[0]
+    vy += bobAccelertion[1]
 
-    r += inc 
-
-    // Increment velocity
-    angularVelocity += xaa;
-
-    // Increment angle
-    xangle += angularVelocity;
-
-    // let d = fixedPoint[0] + Math.sin(xangle) * stringLength
-
-    bobX = fixedPoint[0] + Math.sin(xangle) * stringLength // d * Math.cos(r) + 600
-    // bobY = d * Math.sin(r) + 600
-    bobZ = fixedPoint[2] - Math.cos(xangle) * stringLength
-
-
-    // if (bobX + mx <= 0) mx = -1 * mx
-    // if (bobX + mx >= w) mx = -1 * mx
-    // bobX += mx
+    // Increment angles
+    xangle = clip(xangle + vx, -QUARTER_CIRCLE, QUARTER_CIRCLE);
+    yangle = clip(yangle + vy, -QUARTER_CIRCLE, QUARTER_CIRCLE);
 
     update3dPendulum()
     requestAnimationFrame(loop)
