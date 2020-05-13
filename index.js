@@ -91,6 +91,8 @@ const model = (options = {}) => {
   // CHANGING THINGS //
   /////////////////////
 
+  let xangle = initialAngle // how to do this in 2d?
+  let yangle = 0
   let [vx, vy, vz] = initialVelocity
   let bobX = fixedPoint[0] + Math.sin(initialAngle) * stringLength
   let bobY = fixedPoint[1]
@@ -126,22 +128,22 @@ const model = (options = {}) => {
     ],
     fill: 'none',
     stroke: 'rgba(0, 0, 255, 1)',
-    'stroke-dasharray': "6,6"
+    // 'stroke-dasharray': "6,6"
   })
 
   // BOX BACK
-  PICTURE_3D.$add('path', {
-    d: [
-      `M ${projection([0, d, 0]).join()}`,
-      `L ${projection([0, d, h]).join()}`,
-      `L ${projection([w, d, h]).join()}`,
-      `L ${projection([w, d, 0]).join()}`,
-      `Z`
-    ],
-    fill: 'none',
-    stroke: 'rgba(0, 0, 255, 1)',
-    'stroke-dasharray': "6,6"
-  })
+  // PICTURE_3D.$add('path', {
+  //   d: [
+  //     `M ${projection([0, d, 0]).join()}`,
+  //     `L ${projection([0, d, h]).join()}`,
+  //     `L ${projection([w, d, h]).join()}`,
+  //     `L ${projection([w, d, 0]).join()}`,
+  //     `Z`
+  //   ],
+  //   fill: 'none',
+  //   stroke: 'rgba(0, 0, 255, 1)',
+  //   'stroke-dasharray': "6,6"
+  // })
 
   // PAPER
   PICTURE_3D.$add('path', {
@@ -158,10 +160,7 @@ const model = (options = {}) => {
   })
 
   // BOB SHADOW
-  const s = projection([bobX, bobY, 0])
-  PICTURE_3D.$add('ellipse', {
-    cx: s[0],
-    cy: s[1],
+  const SHADOW_3D = PICTURE_3D.$add('ellipse', {
     rx: 16,
     ry: 8,
     fill: 'rgba(0, 0, 0, 0.2)',
@@ -187,20 +186,13 @@ const model = (options = {}) => {
   })
 
   // STRING
-  const b = projection([bobX, bobY, bobZ])
   const STRING_3D = PICTURE_3D.$add('line', {
-    x1: f[0],
-    y1: f[1],
-    x2: b[0],
-    y2: b[1],
     stroke: 'rgba(200, 20, 55, 1)',
     'stroke-width': 1.5,
   })
 
   // BOB
   const BOB_3D = PICTURE_3D.$add('circle', {
-    cx: b[0],
-    cy: b[1],
     r: 12,
     fill: 'rgba(200, 20, 55, 1)',
   })
@@ -215,50 +207,109 @@ const model = (options = {}) => {
   })
 
   // BOX RIGHT
-  PICTURE_3D.$add('path', {
-    d: [
-      `M ${projection([w, 0, 0]).join()}`,
-      `L ${projection([w, d, 0]).join()}`,
-      `L ${projection([w, d, h]).join()}`,
-      `L ${projection([w, 0, h]).join()}`,
-      `Z`
-    ],
-    fill: 'none',
-    stroke: 'rgba(0, 0, 255, 1)',
-    'stroke-width': 1.5,
-  })
+  // PICTURE_3D.$add('path', {
+  //   d: [
+  //     `M ${projection([w, 0, 0]).join()}`,
+  //     `L ${projection([w, d, 0]).join()}`,
+  //     `L ${projection([w, d, h]).join()}`,
+  //     `L ${projection([w, 0, h]).join()}`,
+  //     `Z`
+  //   ],
+  //   fill: 'none',
+  //   stroke: 'rgba(0, 0, 255, 1)',
+  //   'stroke-width': 1.5,
+  // })
 
   // BOX FRONT
-  PICTURE_3D.$add('path', {
-    d: [
-      `M ${projection([0, 0, 0]).join()}`,
-      `L ${projection([0, 0, h]).join()}`,
-      `L ${projection([w, 0, h]).join()}`,
-      `L ${projection([w, 0, 0]).join()}`,
-      `Z`
-    ],
-    fill: 'none',
-    stroke: 'rgba(0, 0, 255, 1)',
-    'stroke-width': 1.5,
-  })
+  // PICTURE_3D.$add('path', {
+  //   d: [
+  //     `M ${projection([0, 0, 0]).join()}`,
+  //     `L ${projection([0, 0, h]).join()}`,
+  //     `L ${projection([w, 0, h]).join()}`,
+  //     `L ${projection([w, 0, 0]).join()}`,
+  //     `Z`
+  //   ],
+  //   fill: 'none',
+  //   stroke: 'rgba(0, 0, 255, 1)',
+  //   'stroke-width': 1.5,
+  // })
 
   // BOX TOP
-  PICTURE_3D.$add('path', {
-    d: [
-      `M ${projection([0, 0, h]).join()}`,
-      `L ${projection([w, 0, h]).join()}`,
-      `L ${projection([w, d, h]).join()}`,
-      `L ${projection([0, d, h]).join()}`,
-      `Z`
-    ],
-    fill: 'none',
-    stroke: 'rgba(0, 0, 255, 1)',
-    'stroke-width': 1.5,
-  })
+  // PICTURE_3D.$add('path', {
+  //   d: [
+  //     `M ${projection([0, 0, h]).join()}`,
+  //     `L ${projection([w, 0, h]).join()}`,
+  //     `L ${projection([w, d, h]).join()}`,
+  //     `L ${projection([0, d, h]).join()}`,
+  //     `Z`
+  //   ],
+  //   fill: 'none',
+  //   stroke: 'rgba(0, 0, 255, 1)',
+  //   'stroke-width': 1.5,
+  // })
+
+  ///////////////
+  // ANIMATION //
+  ///////////////
+
+  const update3dPendulum = () => {
+    const b = projection([bobX, bobY, bobZ])
+    const s = projection([bobX, bobY, 0])
+
+    STRING_3D.update({
+      x1: f[0],
+      y1: f[1],
+      x2: b[0],
+      y2: b[1],
+    })
+
+    BOB_3D.update({
+      cx: b[0],
+      cy: b[1],
+    })
+
+    SHADOW_3D.update({
+      cx: s[0],
+      cy: s[1],
+    })
+  }
+
+  update3dPendulum()
+
+  let gravity = -0.001
+  let mass = 1
+
+  let angularVelocity = 0
+
+  function loop() {
+    // Calculate acceleration
+    const xaa = mass * gravity * Math.sin(xangle)
+
+    // Increment velocity
+    angularVelocity += xaa;
+
+    // Increment angle
+    xangle += angularVelocity;
+
+    bobX = fixedPoint[0] + Math.sin(xangle) * stringLength
+    bobY = fixedPoint[1]
+    bobZ = fixedPoint[2] - Math.cos(xangle) * stringLength
+
+
+    // if (bobX + mx <= 0) mx = -1 * mx
+    // if (bobX + mx >= w) mx = -1 * mx
+    // bobX += mx
+
+    update3dPendulum()
+    requestAnimationFrame(loop)
+  }
+
+  loop()
 
   return [PICTURE_3D, PICTURE_2D]
 }
 
+// https://www.khanacademy.org/computing/computer-programming/programming-natural-simulations/programming-oscillations/a/trig-and-forces-the-pendulum
 
 //////////////
 // OLD....  //
