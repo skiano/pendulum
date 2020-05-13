@@ -77,8 +77,8 @@ const model = (options = {}) => {
     box: [1200, 1200, 1200],
     paper: [1000, 1000],
     stringLength: 1100,
-    initialAngle: [-QUARTER_CIRCLE / 2, -QUARTER_CIRCLE / 2],
-    initialVelocity: [0.009, 0.009],
+    initialAngle: [QUARTER_CIRCLE / 2, QUARTER_CIRCLE / 2],
+    initialVelocity: [0, 0],
     projection: ([x, y, z = 0]) => {
       const tilt = 300
       const shift = 275
@@ -274,14 +274,17 @@ const model = (options = {}) => {
     bobZ = fixedPoint[2] - h
 
     // UPDATE ACCELERATION!
-    let rangle = Math.acos(h / stringLength)
-    let rAcceleration = mass * gravity * Math.sin(rangle)
+    // let rangle = Math.acos(h / stringLength)
+    // let rAcceleration = mass * gravity * Math.sin(rangle)
 
-    let ax = (dx / (dx + dy)) * rAcceleration
-    ax = dx < 0 ? ax * -1 : ax
+    // let ax =  (dx / (dx + dy)) * rAcceleration // TODO: this is busted...
+    // ax = dx < 0 ? ax * -1 : ax
 
-    let ay = (dy / (dx + dy)) * rAcceleration
-    ay = dy < 0 ? ay * -1 : ay
+    // let ay = (dy / (dx + dy)) * rAcceleration // TODO: this is busted...
+    // ay = dy < 0 ? ay * -1 : ay
+
+    let ax = mass * gravity * Math.sin(xangle)
+    let ay = mass * gravity * Math.sin(yangle)
 
     bobAccelertion = [ax, ay]
 
