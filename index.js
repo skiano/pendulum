@@ -70,7 +70,7 @@ const model = (options = {}) => {
     box: [1200, 1200, 1200],
     paper: [1000, 1000],
     stringLength: 1100,
-    initialAngle: TWO_PI / 13.2,
+    initialAngle: TWO_PI / 8,
     initialVelocity: [0, 0, 0],
     projection: ([x, y, z = 0]) => {
       const tilt = 300
