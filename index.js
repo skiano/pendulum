@@ -121,7 +121,7 @@ const model = (options = {}) => {
   let bobY = fixedPoint[1]
   let bobZ = fixedPoint[2] - Math.cos(initialAngle) * stringLength
   let gravity = -0.0015
-  let isDrawing = true
+  let isDrawing = false
 
   let paperAngle = TWO_PI
   let paperCenter = fixedPoint
@@ -365,9 +365,7 @@ const model = (options = {}) => {
 
     paperAngle += pv
 
-    if (t > 25000) {
-      isDrawing = false
-    }
+    isDrawing = t > 2000 && t < 25000
 
     requestAnimationFrame(loop)
   }
