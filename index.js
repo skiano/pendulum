@@ -79,10 +79,10 @@ const clip = (v, min, max) => {
 const randInRange = (min, max) => (Math.random() * (max - min)) + min
 
 const model = (options = {}) => {
-  const boxh = randInRange(300, 1500)
+  const boxh = randInRange(200, 1600)
   const len = randInRange(40, boxh)
-  const a1 = randInRange(-QUARTER_CIRCLE, QUARTER_CIRCLE)
-  const a2 = randInRange(-QUARTER_CIRCLE, QUARTER_CIRCLE)
+  const a1 = randInRange(-QUARTER_CIRCLE * .9, QUARTER_CIRCLE * .9)
+  const a2 = randInRange(-QUARTER_CIRCLE * .9, QUARTER_CIRCLE * .9)
   const v1 = randInRange(-0.001, 0.001)
   const v2 = randInRange(-0.001, 0.001)
 
