@@ -87,7 +87,7 @@ const model = (options = {}) => {
   } = Object.assign({
     box: [1200, 1200, 1200],
     paper: [1200, 1200],
-    stringLength: 1100,
+    stringLength: 900,
     // initialAngle: [QUARTER_CIRCLE / 2, 0],
     // initialVelocity: [0, 0.01],
     // initialAngle: [QUARTER_CIRCLE / 3, QUARTER_CIRCLE / 2],
@@ -114,6 +114,9 @@ const model = (options = {}) => {
   let xangle = initialAngle[0]
   let yangle = initialAngle[1]
   let [vx, vy] = initialVelocity
+  let prevX = 0
+  let prevY = 0
+  let prevZ = 0
   let bobX = fixedPoint[0] + Math.sin(initialAngle) * stringLength
   let bobY = fixedPoint[1]
   let bobZ = fixedPoint[2] - Math.cos(initialAngle) * stringLength
@@ -123,6 +126,7 @@ const model = (options = {}) => {
   let paperAngle = TWO_PI
   let paperCenter = fixedPoint
   let paperPoints = []
+  let streamPoints = []
 
   let paperRectangle = [
     [fixedPoint[0] - (paper[0] / 2), fixedPoint[1] - (paper[0] / 2)],
@@ -141,7 +145,7 @@ const model = (options = {}) => {
     d: ``,
     fill: 'none',
     stroke: 'rgba(200, 20, 55, 1)',
-    'stroke-width': 1,
+    'stroke-width': 2,
   })
 
   ///////////////////////
@@ -169,7 +173,7 @@ const model = (options = {}) => {
     d: '',
     fill: 'none',
     stroke: 'rgba(200, 20, 55, 1)',
-    'stroke-width': 1,
+    'stroke-width': 2,
   })
 
   // BOB SHADOW
@@ -234,9 +238,38 @@ const model = (options = {}) => {
     bobY = fixedPoint[1] + dy
     bobZ = fixedPoint[2] - h
 
-    if (isDrawing) {
-      paperPoints.push(rotate([bobX, bobY], paperCenter, -paperAngle))
+    // paperPoints.push(rotate([bobX, bobY], paperCenter, -paperAngle))
+
+    let prev = streamPoints
+    streamPoints = []
+    prev.forEach(s => {
+      s.v[2] = s.v[2] -1
+      s.p = [
+        s.p[0] + s.v[0],
+        s.p[1] + s.v[1],
+        s.p[2] + s.v[2],
+      ]
+      if (s.p[2] <= 0) {
+        paperPoints.push(rotate([s.p[0], s.p[1]], paperCenter, -paperAngle))
+      } else {
+        streamPoints.push(s)
+      }
+    })
+
+    if (isDrawing && prevX) {
+      streamPoints.push({
+        p: [bobX, bobY, bobZ],
+        v: [
+          (bobX - prevX) * 1,
+          (bobY - prevY) * 1,
+          (bobZ - prevZ) * 1,
+        ]
+      })
     }
+
+    prevX = bobX
+    prevY = bobY
+    prevZ = bobZ
   }
 
   const update3dPicture = () => {
@@ -260,14 +293,18 @@ const model = (options = {}) => {
       cy: s[1],
     })
 
-    // const p = `${projection([bobX, bobY, 0]).join(',')}`
-    // const d = LINE_3D._attributes.d
     LINE_3D.update({
-      d: paperPoints.map((p, i) => {
-        p = rotate(p, paperCenter, paperAngle)
-        p = projection(p).join()
-        return i > 0 ? `L${p}` : `M${p}`
-      }).join(' ')
+      d: [
+        paperPoints.map((p, i) => {
+          p = rotate(p, paperCenter, paperAngle)
+          p = projection(p).join()
+          return i > 0 ? `L${p}` : `M${p}`
+        }).join(' '),
+          streamPoints.map((s, i) => {
+          p = projection(s.p).join()
+          return i > 0 || paperPoints.length  ? `L${p}` : `M${p}`
+        }).join(' ')
+      ].join(' '),
     })
 
     PAPER_3D.update({
@@ -280,7 +317,7 @@ const model = (options = {}) => {
   }
 
   const update2dPicture = () => {
-    if (isDrawing) {
+    if (isDrawing && paperPoints.length) {
       const [x, y] = paperPoints[paperPoints.length - 1]
       const p = `${x},${1200 - y}`
       const d = LINE_2D._attributes.d
