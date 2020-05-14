@@ -87,13 +87,13 @@ const model = (options = {}) => {
   } = Object.assign({
     box: [1200, 1200, 1200],
     paper: [1200, 1200],
-    stringLength: 1000,
+    stringLength: 1100,
     // initialAngle: [QUARTER_CIRCLE / 2, 0],
     // initialVelocity: [0, 0.01],
     // initialAngle: [QUARTER_CIRCLE / 3, QUARTER_CIRCLE / 2],
     // initialVelocity: [0.0, 0.007],
-    initialAngle: [-QUARTER_CIRCLE * 0.4, QUARTER_CIRCLE * .4],
-    initialVelocity: [0.02, 0.005],
+    initialAngle: [-QUARTER_CIRCLE * 0.4, 0],
+    initialVelocity: [0.0, 0.004],
     projection: ([x, y, z = 0]) => {
       const tilt = 300
       const shift = 275
@@ -118,7 +118,6 @@ const model = (options = {}) => {
   let bobY = fixedPoint[1]
   let bobZ = fixedPoint[2] - Math.cos(initialAngle) * stringLength
   let gravity = -0.0015
-  let mass = 1
   let isDrawing = true
 
   let paperAngle = TWO_PI
@@ -304,8 +303,8 @@ const model = (options = {}) => {
     update3dPicture()
 
     // calcluate angular accelerations
-    const ax = mass * gravity * Math.sin(xangle)
-    const ay = mass * gravity * Math.sin(yangle)
+    const ax = gravity * Math.sin(xangle)
+    const ay = gravity * Math.sin(yangle)
 
     // Increment velocities (multiply by frame time?)
     vx += ax
@@ -316,21 +315,20 @@ const model = (options = {}) => {
     yangle = clip(yangle + vy, -QUARTER_CIRCLE, QUARTER_CIRCLE);
 
     // damp
-    vx *= 0.9997
-    vy *= 0.9997
-    mass = Math.max(0, mass - 0.00018)
+    vx *= 0.9998
+    vy *= 0.9998
 
     // rotate paper
     if (isDrawing) {
       pa = Math.sin(t / 600) * -0.001
       pv += pa
     } else {
-      pv = pv < 0.00001 ? 0 : pv * 0.7
+      pv = Math.abs(pv) < 0.000001 ? 0 : pv * 0.9
     }
 
     paperAngle += pv
 
-    if (mass < 0 || t > 45000) {
+    if (t > 25000) {
       isDrawing = false
     }
 
