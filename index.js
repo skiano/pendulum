@@ -76,7 +76,16 @@ const clip = (v, min, max) => {
   return v
 }
 
+const randInRange = (min, max) => (Math.random() * (max - min)) + min
+
 const model = (options = {}) => {
+  const boxh = randInRange(300, 1500)
+  const len = randInRange(40, boxh)
+  const a1 = randInRange(-QUARTER_CIRCLE, QUARTER_CIRCLE)
+  const a2 = randInRange(-QUARTER_CIRCLE, QUARTER_CIRCLE)
+  const v1 = randInRange(-0.001, 0.001)
+  const v2 = randInRange(-0.001, 0.001)
+
   const {
     box,
     paper,
@@ -85,15 +94,19 @@ const model = (options = {}) => {
     initialAngle,
     initialVelocity,
   } = Object.assign({
-    box: [1200, 1200, 1200],
+    // box: [1200, 1200, 1200],
+    box: [1200, 1200, boxh],
     paper: [1200, 1200],
-    stringLength: 900,
+    // stringLength: 900,
+    stringLength: len,
     // initialAngle: [QUARTER_CIRCLE / 2, 0],
     // initialVelocity: [0, 0.01],
     // initialAngle: [QUARTER_CIRCLE / 3, QUARTER_CIRCLE / 2],
     // initialVelocity: [0.0, 0.007],
-    initialAngle: [-QUARTER_CIRCLE * 0.4, 0],
-    initialVelocity: [0.0, 0.004],
+    // initialAngle: [-QUARTER_CIRCLE * 0.4, 0],
+    // initialVelocity: [0.0, 0.004],
+    initialAngle: [a1, a2],
+    initialVelocity: [v1, v2],
     projection: ([x, y, z = 0]) => {
       const tilt = 300
       const shift = 275
@@ -124,7 +137,7 @@ const model = (options = {}) => {
   let isDrawing = false
 
   let paperAngle = TWO_PI
-  let paperCenter = fixedPoint
+  let paperCenter = [fixedPoint[0] + 0, fixedPoint[1] + 0]
   let paperPoints = []
   let streamPoints = []
 
@@ -356,16 +369,12 @@ const model = (options = {}) => {
     vy *= 0.9998
 
     // rotate paper
-    if (isDrawing) {
-      pa = Math.sin(t / 600) * -0.001
-      pv += pa
-    } else {
-      pv = Math.abs(pv) < 0.000001 ? 0 : pv * 0.9
-    }
+    pa = Math.sin(t / 600) * -0.001
+    pv += pa
 
     paperAngle += pv
 
-    isDrawing = t > 2000 && t < 25000
+    isDrawing = t > 2000 && t < 25000 && !window.space_pressed
 
     requestAnimationFrame(loop)
   }
@@ -380,3 +389,16 @@ const model = (options = {}) => {
 const pics = model()
 const container = document.getElementById('pictures')
 pics.forEach((p) => container.appendChild(p))
+
+// document.addEventListener('keydown', (e) => {
+//   if (e.keyCode === 32) {
+//     window.space_pressed = 'SPACE'
+//     e.preventDefault()
+//   }
+// })
+
+// document.addEventListener('keyup', (e) => {
+//   if (e.keyCode === 32) {
+//     window.space_pressed = null
+//   }
+// })
