@@ -151,19 +151,6 @@ const model = (options = {}) => {
 
   const PICTURE_3D = picture()
 
-  // BOX BASE
-  // PICTURE_3D.$add('path', {
-  //   d: [
-  //     `M ${projection([0, 0, 0]).join()}`,
-  //     `L ${projection([w, 0, 0]).join()}`,
-  //     `L ${projection([w, d, 0]).join()}`,
-  //     `L ${projection([0, d, 0]).join()}`,
-  //     `Z`
-  //   ],
-  //   fill: 'none',
-  //   stroke: 'rgba(0, 0, 255, 1)',
-  // })
-
   // BACKGROUND
   PICTURE_3D.$add('path', {
     d: 'M 0,0 L 1200,0 L 1200,1200 L 0,1200 Z',
