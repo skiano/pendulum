@@ -345,7 +345,7 @@ const model = (options = {}) => {
   let pa = 0.00005
   let start = Date.now()
   let periodFactor = randInRange(400, 1000)
-  let amplitudeFactor = randInRange(0.0008, 0.002)
+  let amplitudeFactor = randInRange(0.0005, 0.0015)
 
   function loop() {
     t = Date.now() - start
