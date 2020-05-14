@@ -341,9 +341,11 @@ const model = (options = {}) => {
   }
   
   let t = 0
-  let pv = 0.01
+  let pv = 0
   let pa = 0.00005
   let start = Date.now()
+  let periodFactor = randInRange(400, 1000)
+  let amplitudeFactor = randInRange(0.0008, 0.002)
 
   function loop() {
     t = Date.now() - start
@@ -369,7 +371,7 @@ const model = (options = {}) => {
     vy *= 0.9998
 
     // rotate paper
-    pa = Math.sin(t / 600) * -0.001
+    pa = Math.sin(t / periodFactor) * -amplitudeFactor
     pv += pa
 
     paperAngle += pv

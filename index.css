@@ -18,6 +18,10 @@
     -2px 2px 0px rgba(0, 0, 0, 0.03);
 }
 
+.picture:first-child {
+  box-shadow: none;
+}
+
 .picture__content {
   height: 0;
   padding-bottom: 100%;
