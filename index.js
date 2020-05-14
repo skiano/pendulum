@@ -59,6 +59,17 @@ const distance = (a, b) => {
   return Math.sqrt(sum)
 }
 
+const rotate = ([x, y], [cx, cy], angle) => {
+  const cosa = Math.cos(angle)
+  const sina = Math.sin(angle)
+  const rotatedX = cosa * (x - cx) - sina * (y - cy) + cx;
+  const rotatedY = sina * (x - cx) + cosa * (y - cy) + cy;
+  return [
+    rotatedX,
+    rotatedY,
+  ]
+}
+
 const clip = (v, min, max) => {
   if (v < min) return min
   if (v > max) return max
@@ -74,15 +85,15 @@ const model = (options = {}) => {
     initialAngle,
     initialVelocity,
   } = Object.assign({
-    box: [1200, 1200, 600],
-    paper: [1000, 1000],
-    stringLength: 550,
+    box: [1200, 1200, 1200],
+    paper: [1200, 1200],
+    stringLength: 1000,
     // initialAngle: [QUARTER_CIRCLE / 2, 0],
     // initialVelocity: [0, 0.01],
     // initialAngle: [QUARTER_CIRCLE / 3, QUARTER_CIRCLE / 2],
     // initialVelocity: [0.0, 0.007],
-    initialAngle: [QUARTER_CIRCLE / 3, QUARTER_CIRCLE * .8],
-    initialVelocity: [0.006, 0.001],
+    initialAngle: [-QUARTER_CIRCLE * 0.4, QUARTER_CIRCLE * .4],
+    initialVelocity: [0.02, 0.005],
     projection: ([x, y, z = 0]) => {
       const tilt = 300
       const shift = 275
@@ -108,6 +119,11 @@ const model = (options = {}) => {
   let bobZ = fixedPoint[2] - Math.cos(initialAngle) * stringLength
   let gravity = -0.0015
   let mass = 1
+  let isDrawing = true
+
+  let paperAngle = TWO_PI
+  let paperCenter = fixedPoint
+  let paperPoints = []
 
   let paperRectangle = [
     [fixedPoint[0] - (paper[0] / 2), fixedPoint[1] - (paper[0] / 2)],
@@ -125,7 +141,7 @@ const model = (options = {}) => {
   const LINE_2D = PICTURE_2D.$add('path', {
     d: ``,
     fill: 'none',
-    stroke: 'rgba(0, 0, 0, 1)',
+    stroke: 'rgba(200, 20, 55, 1)',
     'stroke-width': 1,
   })
 
@@ -136,30 +152,37 @@ const model = (options = {}) => {
   const PICTURE_3D = picture()
 
   // BOX BASE
+  // PICTURE_3D.$add('path', {
+  //   d: [
+  //     `M ${projection([0, 0, 0]).join()}`,
+  //     `L ${projection([w, 0, 0]).join()}`,
+  //     `L ${projection([w, d, 0]).join()}`,
+  //     `L ${projection([0, d, 0]).join()}`,
+  //     `Z`
+  //   ],
+  //   fill: 'none',
+  //   stroke: 'rgba(0, 0, 255, 1)',
+  // })
+
+  // BACKGROUND
   PICTURE_3D.$add('path', {
-    d: [
-      `M ${projection([0, 0, 0]).join()}`,
-      `L ${projection([w, 0, 0]).join()}`,
-      `L ${projection([w, d, 0]).join()}`,
-      `L ${projection([0, d, 0]).join()}`,
-      `Z`
-    ],
-    fill: 'none',
-    stroke: 'rgba(0, 0, 255, 1)',
-    // 'stroke-dasharray': "6,6"
+    d: 'M 0,0 L 1200,0 L 1200,1200 L 0,1200 Z',
+    fill: 'rgba(0, 0, 0, 0.03)',
+    'stroke-width': 1,
   })
 
   // PAPER
-  PICTURE_3D.$add('path', {
-    d: [
-      `M ${projection(paperRectangle[0]).join()}`,
-      `L ${projection(paperRectangle[1]).join()}`,
-      `L ${projection(paperRectangle[2]).join()}`,
-      `L ${projection(paperRectangle[3]).join()}`,
-      `Z`
-    ],
-    fill: 'rgba(0, 0, 0, 0.05)',
+  const PAPER_3D = PICTURE_3D.$add('path', {
+    d: '',
+    fill: 'white',
     stroke: 'rgba(0, 0, 0, 0.4)',
+    'stroke-width': 1,
+  })
+
+  const LINE_3D = PICTURE_3D.$add('path', {
+    d: '',
+    fill: 'none',
+    stroke: 'rgba(200, 20, 55, 1)',
     'stroke-width': 1,
   })
 
@@ -224,6 +247,10 @@ const model = (options = {}) => {
     bobX = fixedPoint[0] + dx
     bobY = fixedPoint[1] + dy
     bobZ = fixedPoint[2] - h
+
+    if (isDrawing) {
+      paperPoints.push(rotate([bobX, bobY], paperCenter, -paperAngle))
+    }
   }
 
   const update3dPicture = () => {
@@ -246,18 +273,45 @@ const model = (options = {}) => {
       cx: s[0],
       cy: s[1],
     })
-  }
 
-  const update2dPicture = () => {
-    const p = `${bobX},${1200 - bobY}`
-    const d = LINE_2D._attributes.d
+    // const p = `${projection([bobX, bobY, 0]).join(',')}`
+    // const d = LINE_3D._attributes.d
+    LINE_3D.update({
+      d: paperPoints.map((p, i) => {
+        p = rotate(p, paperCenter, paperAngle)
+        p = projection(p).join()
+        return i > 0 ? `L${p}` : `M${p}`
+      }).join(' ')
+    })
 
-    LINE_2D.update({
-      d: d ? d + ` L${p}` : `M${p}`
+    PAPER_3D.update({
+      d: paperRectangle.map((p, i) => {
+        p = rotate(p, paperCenter, paperAngle)
+        p = projection(p).join()
+        return i > 0 ? `L${p}` : `M${p}`
+      }).join(' ') + 'Z'
     })
   }
 
+  const update2dPicture = () => {
+    if (isDrawing) {
+      const [x, y] = paperPoints[paperPoints.length - 1]
+      const p = `${x},${1200 - y}`
+      const d = LINE_2D._attributes.d
+      LINE_2D.update({
+        d: d ? d + ` L${p}` : `M${p}`
+      })
+    }
+  }
+  
+  let t = 0
+  let pv = 0.01
+  let pa = 0.00005
+  let start = Date.now()
+
   function loop() {
+    t = Date.now() - start
+
     updatePosition()
     update2dPicture()
     update3dPicture()
@@ -277,13 +331,23 @@ const model = (options = {}) => {
     // damp
     vx *= 0.9997
     vy *= 0.9997
-    mass -= 0.00018
+    mass = Math.max(0, mass - 0.00018)
 
-    if (mass > 0) {
-      requestAnimationFrame(loop)
+    // rotate paper
+    if (isDrawing) {
+      pa = Math.sin(t / 600) * -0.001
+      pv += pa
     } else {
-      alert('end...')
+      pv = pv < 0.00001 ? 0 : pv * 0.7
     }
+
+    paperAngle += pv
+
+    if (mass < 0 || t > 45000) {
+      isDrawing = false
+    }
+
+    requestAnimationFrame(loop)
   }
 
   loop()
